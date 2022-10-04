@@ -16,6 +16,10 @@
             "name": "WaterLevel",
             "type": "int",
             "len": 8
+        },
+        {
+            "name": "var0_Temp_C_2_Avg",
+            "type": "float"
         }
     ]
 }

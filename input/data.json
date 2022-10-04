@@ -1,5 +1,6 @@
 { 
     "PTemp": 268, 
     "BattVolt_value": 224, 
-    "WaterLevel": 115 
+    "WaterLevel": 115,
+    "var0_Temp_C_2_Avg": 0.508746569
 }
