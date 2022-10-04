@@ -1,0 +1,22 @@
+{
+  "name": "tesacom",
+  "version": "1.0.0",
+  "description": "challenge",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gerardhemgren/tesacom.git"
+  },
+  "author": "eric gerard",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/gerardhemgren/tesacom/issues"
+  },
+  "homepage": "https://github.com/gerardhemgren/tesacom#readme",
+  "dependencies": {
+    "nodemon": "^2.0.20"
+  }
+}
