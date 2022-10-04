@@ -1,0 +1,21 @@
+{
+    "name": "BinaryParser",
+    "type": "record",
+    "fields": [
+        {
+            "name": "PTemp",
+            "type": "int",
+            "len": 12
+        },
+        {
+            "name": "BattVolt_value",
+            "type": "int",
+            "len": 12
+        },
+        {
+            "name": "WaterLevel",
+            "type": "int",
+            "len": 8
+        }
+    ]
+}

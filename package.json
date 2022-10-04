@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/gerardhemgren/tesacom#readme",
   "dependencies": {
+    "avsc": "^5.7.6",
     "nodemon": "^2.0.20"
   }
 }
