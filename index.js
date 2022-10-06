@@ -7,18 +7,15 @@ const pkg = require('./input/data.json')
 
 function exampleOne() {
     try {
-        const schema = fs.readFileSync(path.join(__dirname, 'schema', 'Package.avsc'), 'utf-8');
+        const schema = fs.readFileSync(path.join(__dirname, 'schema', 'Package.avsc'), 'ascii');
         const type = avro.parse(schema);
         const encoded = type.toBuffer(pkg);
         const decoded = type.fromBuffer(encoded);
-        const re = () => {
-            console.log(encoded.toString('hex'));
-            console.log(decoded);
-            console.log('JSON size', Buffer.byteLength(JSON.stringify(pkg)));
-            console.log('Avro size', Buffer.byteLength(encoded));
-            console.log('________')
+        const size = {
+            json: Buffer.byteLength(JSON.stringify(pkg)),
+            avro: Buffer.byteLength(encoded)
         };
-        return re();
+        return { encoded, decoded, size };
     } catch (e) {
         console.log(e);
         return false;
@@ -29,16 +26,24 @@ function exampleOne() {
 
 function exampleTwo() {
     try {
-        const schema = fs.readFileSync(path.join(__dirname, 'schema', 'PackageTwo.avsc'), 'utf-8');
+        const schema = fs.readFileSync(path.join(__dirname, 'schema', 'PackageTwo.avsc'), 'ascii');
         const type = avro.parse(schema);
-        const trama = Buffer.from([1, 2, 3]); 
-        const decoded = type.fromBuffer(trama);
-        return console.log(decoded);
+        const trama = '0x010203';
+        const transformedTrama = Buffer.from(trama.slice(2), 'hex');
+        const decoded = type.fromBuffer(transformedTrama);
+        return { decoded, trama, transformedTrama };
     } catch (e) {
         console.log('can not decode', e);
         return false;
     }
 }
 
-exampleOne();
-exampleTwo();
+console.log('hex encoded: ', exampleOne().encoded.toString('hex'));
+console.log('JSON size', exampleOne().size.json);
+console.log('Avro size', exampleOne().size.avro);
+console.log(exampleOne().decoded);
+
+console.log(``)
+
+console.log(exampleTwo().transformedTrama);
+console.log(exampleTwo().decoded);
