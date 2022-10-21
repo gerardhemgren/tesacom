@@ -1,8 +1,12 @@
+//data and schema both are corrupted
 //data
 const exampleOne = {
-    "PTemp": 268,
-    "UValue": 4294967295,
-    "PTemp_C_2_Avg": 0.55
+    "PTemp": 32767,
+    "UValue": 31,
+    "Error": 0,
+    "Error": 0,
+    "Error": 0,
+    "PTemp_C_2_Avg": 8813.5005,
 };
 
 const exampleTwo = {
@@ -15,17 +19,24 @@ const exampleTwo = {
 //Schema
 const schemaOne = [
     {
-        tag: "PTemp",
-        type: "int",
-    },
-    {
-        tag: "UValue",
-        type: "uint",
+        tag: "ErrorTag",
+        type: "ErrorType",
+        len: 1,
     },
     {
         tag: "PTemp_C_2_Avg",
         type: "float",
-    }
+    },
+    {
+        tag: "UValue",
+        type: "int",
+        len: 2,
+    },
+    {
+        tag: "PTemp",
+        type: "uint",
+        len: 10,
+    },
 ];
 
 const schemaTwo = [
@@ -61,15 +72,14 @@ function encode(data, schema) {
 
         let i = 0;
         for (key in dataKeys) {
-            const typeFromSchemaTag = schema.find(t => t.tag === dataKeys[key])?.type;
-
-            switch (typeFromSchemaTag) {
+            const typeFromSchema = schema.find(t => t.tag === dataKeys[key])?.type;
+            switch (typeFromSchema) {
                 case 'int':
-                    dataView.setInt32(i * 4, data[dataKeys[key]]);
+                    dataView.setInt8(i * 4, data[dataKeys[key]]);
                     break;
 
                 case 'uint':
-                    dataView.setUint32(i * 4, data[dataKeys[key]]);
+                    dataView.setUint16(i * 4, data[dataKeys[key]]);
                     break;
 
                 case 'float':
@@ -77,14 +87,16 @@ function encode(data, schema) {
                     break;
 
                 default:
+                    i--;
                     break;
             }
             i++;
         }
 
-        const hex = Buffer.from(dataView.buffer).toString('hex');
+        let hex = Buffer.from(dataView.buffer).toString('hex');
+        const buff = Buffer.from(dataView.buffer);
 
-        return { dataView, size, hex };
+        return { dataView, size, hex, buff };
     } catch (error) {
         console.log(error);
     }
@@ -98,15 +110,15 @@ const decode = (view, schema) => {
         let dataView = view?.dataView;
         let i = 0;
         for (let key in dataKeys) {
-            const typeFromSchemaTag = schema.find(t => t.tag === dataKeys[key])?.type;
+            const typeFromSchema = schema.find(t => t.tag === dataKeys[key])?.type;
 
-            switch (typeFromSchemaTag) {
+            switch (typeFromSchema) {
                 case 'int':
-                    _object[dataKeys[key]] = dataView.getInt32(i * 4);
+                    _object[dataKeys[key]] = dataView.getInt8(i * 4);
                     break;
 
                 case 'uint':
-                    _object[dataKeys[key]] = dataView.getUint32(i * 4);
+                    _object[dataKeys[key]] = dataView.getUint16(i * 4);
                     break;
 
                 case 'float':
@@ -124,10 +136,18 @@ const decode = (view, schema) => {
     }
 };
 
+console.log(`
+ExampleOne
+`)
 console.log(decode(encode(exampleOne, schemaOne), schemaOne));
-console.log(encode(exampleOne, schemaOne)?.size);
+console.log('HEX:', encode(exampleOne, schemaOne)?.hex);
+console.log('Buffer:', encode(exampleOne, schemaOne)?.buff);
+console.log('Size:', encode(exampleOne, schemaOne)?.size);
 
+console.log(`
+ExampleTwo
+`)
 console.log(decode(encode(exampleTwo, schemaTwo), schemaTwo));
-console.log(encode(exampleTwo, schemaTwo)?.size);
-
-console.log('HEX from exampleTwo:', encode(exampleTwo, schemaTwo)?.hex);
+console.log('HEX:', encode(exampleTwo, schemaTwo)?.hex);
+console.log('Buffer:', encode(exampleTwo, schemaTwo)?.buff);
+console.log('Size:', encode(exampleTwo, schemaTwo)?.size);
