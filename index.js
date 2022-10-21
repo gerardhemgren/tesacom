@@ -1,49 +1,133 @@
-const fs = require('fs');
-const path = require('path');
-const avro = require('avsc');
-const pkg = require('./input/data.json')
+//data
+const exampleOne = {
+    "PTemp": 268,
+    "UValue": 4294967295,
+    "PTemp_C_2_Avg": 0.55
+};
 
-// Ejemplo 1
+const exampleTwo = {
+    "XTemp": 120,
+    "ATemp": 33,
+    "XTemp_H_3_Avg": 4267.0004002,
+    "ATemp_G_11_Avg": 55.03
+};
 
-function exampleOne() {
+//Schema
+const schemaOne = [
+    {
+        tag: "PTemp",
+        type: "int",
+    },
+    {
+        tag: "UValue",
+        type: "uint",
+    },
+    {
+        tag: "PTemp_C_2_Avg",
+        type: "float",
+    }
+];
+
+const schemaTwo = [
+    {
+        tag: "XTemp",
+        type: "int",
+    }, {
+        tag: "ATemp",
+        type: "uint",
+    },
+    {
+        tag: "XTemp_H_3_Avg",
+        type: "float",
+    },
+    {
+        tag: "ATemp_G_11_Avg",
+        type: "float",
+    }
+];
+
+let dataKeys;
+
+//encode
+function encode(data, schema) {
+    dataKeys = Object.keys(data);
+    if (dataKeys.length !== schema.length) {
+        return null;
+    }
     try {
-        const schema = fs.readFileSync(path.join(__dirname, 'schema', 'Package.avsc'), 'ascii');
-        const type = avro.parse(schema);
-        const encoded = type.toBuffer(pkg);
-        const decoded = type.fromBuffer(encoded);
-        const size = {
-            json: Buffer.byteLength(JSON.stringify(pkg)),
-            avro: Buffer.byteLength(encoded)
-        };
-        return { encoded, decoded, size };
-    } catch (e) {
-        console.log(e);
-        return false;
+        const buffer = new ArrayBuffer((schema.length * 4));
+        const dataView = new DataView(buffer);
+        const size = dataView.byteLength;
+
+        let i = 0;
+        for (key in dataKeys) {
+            const typeFromSchemaTag = schema.find(t => t.tag === dataKeys[key])?.type;
+
+            switch (typeFromSchemaTag) {
+                case 'int':
+                    dataView.setInt32(i * 4, data[dataKeys[key]]);
+                    break;
+
+                case 'uint':
+                    dataView.setUint32(i * 4, data[dataKeys[key]]);
+                    break;
+
+                case 'float':
+                    dataView.setFloat32(i * 4, data[dataKeys[key]]);
+                    break;
+
+                default:
+                    break;
+            }
+            i++;
+        }
+
+        const hex = Buffer.from(dataView.buffer).toString('hex');
+
+        return { dataView, size, hex };
+    } catch (error) {
+        console.log(error);
     }
 }
 
-// Otro Ejemplo de deserialización
+//decode
+const decode = (view, schema) => {
+    let _object = {};
 
-function exampleTwo() {
     try {
-        const schema = fs.readFileSync(path.join(__dirname, 'schema', 'PackageTwo.avsc'), 'ascii');
-        const type = avro.parse(schema);
-        const trama = '0x010203';
-        const transformedTrama = Buffer.from(trama.slice(2), 'hex');
-        const decoded = type.fromBuffer(transformedTrama);
-        return { decoded, trama, transformedTrama };
-    } catch (e) {
-        console.log('can not decode', e);
-        return false;
+        let dataView = view?.dataView;
+        let i = 0;
+        for (let key in dataKeys) {
+            const typeFromSchemaTag = schema.find(t => t.tag === dataKeys[key])?.type;
+
+            switch (typeFromSchemaTag) {
+                case 'int':
+                    _object[dataKeys[key]] = dataView.getInt32(i * 4);
+                    break;
+
+                case 'uint':
+                    _object[dataKeys[key]] = dataView.getUint32(i * 4);
+                    break;
+
+                case 'float':
+                    _object[dataKeys[key]] = dataView.getFloat32(i * 4);
+                    break;
+
+                default:
+                    break;
+            }
+            i++;
+        }
+        return _object;
+    } catch (error) {
+        console.log(error)
     }
-}
+};
 
-console.log('hex encoded: ', exampleOne().encoded.toString('hex'));
-console.log('JSON size', exampleOne().size.json);
-console.log('Avro size', exampleOne().size.avro);
-console.log(exampleOne().decoded);
+console.log(decode(encode(exampleOne, schemaOne), schemaOne));
+console.log(encode(exampleOne, schemaOne)?.size);
 
-console.log(``)
+console.log(decode(encode(exampleTwo, schemaTwo), schemaTwo));
+console.log(encode(exampleTwo, schemaTwo)?.size);
 
-console.log(exampleTwo().transformedTrama);
-console.log(exampleTwo().decoded);
+console.log('HEX from exampleTwo:', encode(exampleTwo, schemaTwo)?.hex);
