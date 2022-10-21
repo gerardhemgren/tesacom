@@ -21,7 +21,7 @@ const schemaOne = [
     {
         tag: "ErrorTag",
         type: "ErrorType",
-        len: 1,
+        len: 0,
     },
     {
         tag: "PTemp_C_2_Avg",
@@ -59,12 +59,44 @@ const schemaTwo = [
 
 let dataKeys;
 
+function bufferSchema(example, schema) {
+    const mergedSchema = [];
+    dataKeys = Object.keys(example);
+    for (let key in dataKeys) {
+        const typeFromSchema = schema.find(t => t.tag === dataKeys[key])?.type;
+        const tagFromSchema = schema.find(t => t.tag === dataKeys[key])?.tag;
+        const lenFromSchema = schema.find(t => t.tag === dataKeys[key])?.len;
+        const valueFromExample = example[tagFromSchema];
+        const sizeFromSchema = (len) => {
+            if (len <= 7) {
+                return 1;
+            } else if (len >= 8 & len <= 31) {
+                return 2;
+            } else {
+                return 4
+            }
+        };
+        tempObject = {
+            tag: tagFromSchema,
+            value: valueFromExample,
+            type: typeFromSchema,
+            len: lenFromSchema,
+            size: sizeFromSchema(lenFromSchema),
+        };
+        if (tagFromSchema) {
+            mergedSchema.push(tempObject);
+        }
+    }
+    totalSize = mergedSchema.reduce((p, c) => p + c.size, 0)
+    console.log(mergedSchema, totalSize);
+    return { mergedSchema };
+}
+bufferSchema(exampleOne, schemaOne);
+
 //encode
 function encode(data, schema) {
     dataKeys = Object.keys(data);
-    if (dataKeys.length !== schema.length) {
-        return null;
-    }
+
     try {
         const buffer = new ArrayBuffer((schema.length * 4));
         const dataView = new DataView(buffer);
@@ -136,18 +168,18 @@ const decode = (view, schema) => {
     }
 };
 
-console.log(`
-ExampleOne
-`)
-console.log(decode(encode(exampleOne, schemaOne), schemaOne));
-console.log('HEX:', encode(exampleOne, schemaOne)?.hex);
+// console.log(`
+// ExampleOne
+// `)
+// console.log(decode(encode(exampleOne, schemaOne), schemaOne));
+// console.log('HEX:', encode(exampleOne, schemaOne)?.hex);
 console.log('Buffer:', encode(exampleOne, schemaOne)?.buff);
-console.log('Size:', encode(exampleOne, schemaOne)?.size);
+// console.log('Size:', encode(exampleOne, schemaOne)?.size);
 
-console.log(`
-ExampleTwo
-`)
-console.log(decode(encode(exampleTwo, schemaTwo), schemaTwo));
-console.log('HEX:', encode(exampleTwo, schemaTwo)?.hex);
-console.log('Buffer:', encode(exampleTwo, schemaTwo)?.buff);
-console.log('Size:', encode(exampleTwo, schemaTwo)?.size);
+// console.log(`
+// ExampleTwo
+// `)
+// console.log(decode(encode(exampleTwo, schemaTwo), schemaTwo));
+// console.log('HEX:', encode(exampleTwo, schemaTwo)?.hex);
+// console.log('Buffer:', encode(exampleTwo, schemaTwo)?.buff);
+// console.log('Size:', encode(exampleTwo, schemaTwo)?.size);
