@@ -1,7 +1,7 @@
 //data and schema both are corrupted
 //data
 const exampleOne = {
-    "PTemp": 32767,
+    "PTemp": 200,
     "UValue": 31,
     "Error": 0,
     "Error": 0,
@@ -10,7 +10,7 @@ const exampleOne = {
 };
 
 const exampleTwo = {
-    "XTemp": 120,
+    "XTemp": 1203355555,
     "ATemp": 33,
     "XTemp_H_3_Avg": 4267.0004002,
     "ATemp_G_11_Avg": 55.03
@@ -35,7 +35,7 @@ const schemaOne = [
     {
         tag: "PTemp",
         type: "uint",
-        len: 10,
+        len: 2,
     },
 ];
 
@@ -43,9 +43,11 @@ const schemaTwo = [
     {
         tag: "XTemp",
         type: "int",
+        len: 16,
     }, {
         tag: "ATemp",
         type: "uint",
+        len: 8,
     },
     {
         tag: "XTemp_H_3_Avg",
@@ -59,10 +61,10 @@ const schemaTwo = [
 
 let dataKeys;
 
-function bufferSchema(example, schema) {
+function data(example, schema) {
     const mergedSchema = [];
     dataKeys = Object.keys(example);
-    for (let key in dataKeys) {
+    for (key in dataKeys) {
         const typeFromSchema = schema.find(t => t.tag === dataKeys[key])?.type;
         const tagFromSchema = schema.find(t => t.tag === dataKeys[key])?.tag;
         const lenFromSchema = schema.find(t => t.tag === dataKeys[key])?.len;
@@ -70,7 +72,7 @@ function bufferSchema(example, schema) {
         const sizeFromSchema = (len) => {
             if (len <= 7) {
                 return 1;
-            } else if (len >= 8 & len <= 31) {
+            } else if (len >= 8 & len <= 15) {
                 return 2;
             } else {
                 return 4
@@ -88,73 +90,135 @@ function bufferSchema(example, schema) {
         }
     }
     totalSize = mergedSchema.reduce((p, c) => p + c.size, 0)
-    console.log(mergedSchema, totalSize);
-    return { mergedSchema };
+    return { mergedSchema, totalSize };
 }
-bufferSchema(exampleOne, schemaOne);
 
 //encode
-function encode(data, schema) {
-    dataKeys = Object.keys(data);
-
+function encode(data) {
     try {
-        const buffer = new ArrayBuffer((schema.length * 4));
+        const buffer = new ArrayBuffer(data.totalSize);
         const dataView = new DataView(buffer);
-        const size = dataView.byteLength;
 
         let i = 0;
-        for (key in dataKeys) {
-            const typeFromSchema = schema.find(t => t.tag === dataKeys[key])?.type;
-            switch (typeFromSchema) {
+        for (d in data.mergedSchema) {
+
+            switch (data.mergedSchema[d].type) {
                 case 'int':
-                    dataView.setInt8(i * 4, data[dataKeys[key]]);
-                    break;
+                    if (data.mergedSchema[d].size === 1) {
+                        dataView.setInt8(i, data.mergedSchema[d].value);
+                        i = i + 1;
+                        break;
+
+                    }
+                    else if (data.mergedSchema[d].size === 2) {
+                        dataView.setInt16(i, data.mergedSchema[d].value);
+                        i = i + 2;
+                        break;
+
+                    }
+                    else if (data.mergedSchema[d].size === 4) {
+                        dataView.setInt32(i, data.mergedSchema[d].value);
+                        i = i + 4;
+                        break;
+
+                    }
 
                 case 'uint':
-                    dataView.setUint16(i * 4, data[dataKeys[key]]);
-                    break;
+                    if (data.mergedSchema[d].size === 1) {
+                        dataView.setUint8(i, data.mergedSchema[d].value);
+                        i = i + 1;
+                        break;
+
+                    }
+                    else if (data.mergedSchema[d].size === 2) {
+                        dataView.setUint16(i, data.mergedSchema[d].value);
+                        i = i + 2;
+                        break;
+
+                    }
+                    else if (data.mergedSchema[d].size === 4) {
+                        dataView.setUInt32(i, data.mergedSchema[d].value);
+                        i = i + 4;
+                        break;
+
+                    }
+
 
                 case 'float':
-                    dataView.setFloat32(i * 4, data[dataKeys[key]]);
+                    dataView.setFloat32(i, data.mergedSchema[d].value);
+                    i = i + 4;
                     break;
 
                 default:
-                    i--;
                     break;
             }
-            i++;
         }
 
+        const size = dataView.byteLength;
         let hex = Buffer.from(dataView.buffer).toString('hex');
         const buff = Buffer.from(dataView.buffer);
 
-        return { dataView, size, hex, buff };
+        return { dataView, size, hex, buff, data };
     } catch (error) {
         console.log(error);
     }
 }
 
 //decode
-const decode = (view, schema) => {
+const decode = (encode) => {
     let _object = {};
 
     try {
-        let dataView = view?.dataView;
-        let i = 0;
-        for (let key in dataKeys) {
-            const typeFromSchema = schema.find(t => t.tag === dataKeys[key])?.type;
+        let dataView = encode?.dataView;
+        let data = encode?.data;
 
-            switch (typeFromSchema) {
+        let i = 0;
+        for (d in data.mergedSchema) {
+
+            switch (data.mergedSchema[d].type) {
                 case 'int':
-                    _object[dataKeys[key]] = dataView.getInt8(i * 4);
-                    break;
+                    if (data.mergedSchema[d].size === 1) {
+                        _object[data.mergedSchema[d].tag] = dataView.getInt8(i);
+                        i = i;
+                        break;
+
+                    }
+                    else if (data.mergedSchema[d].size === 2) {
+                        _object[data.mergedSchema[d].tag] = dataView.getInt16(i);
+                        i = i + 1;
+                        break;
+
+                    }
+                    else if (data.mergedSchema[d].size === 4) {
+                        _object[data.mergedSchema[d].tag] = dataView.getInt32(i);
+                        i = i + 3;
+                        break;
+
+                    }
 
                 case 'uint':
-                    _object[dataKeys[key]] = dataView.getUint16(i * 4);
-                    break;
+                    if (data.mergedSchema[d].size === 1) {
+                        _object[data.mergedSchema[d].tag] = dataView.getUint8(i);
+                        i = i;
+                        break;
+
+                    }
+                    else if (data.mergedSchema[d].size === 2) {
+                        _object[data.mergedSchema[d].tag] = dataView.getUint16(i);
+                        i = i + 1;
+                        break;
+
+                    }
+                    else if (data.mergedSchema[d].size === 4) {
+                        _object[data.mergedSchema[d].tag] = dataView.getUint32(i);
+                        i = i + 3;
+                        break;
+
+                    }
 
                 case 'float':
-                    _object[dataKeys[key]] = dataView.getFloat32(i * 4);
+                    _object[data.mergedSchema[d].tag] = dataView.getFloat32(i);
+                    i = i + 3;
                     break;
 
                 default:
@@ -168,18 +232,18 @@ const decode = (view, schema) => {
     }
 };
 
-// console.log(`
-// ExampleOne
-// `)
-// console.log(decode(encode(exampleOne, schemaOne), schemaOne));
-// console.log('HEX:', encode(exampleOne, schemaOne)?.hex);
-console.log('Buffer:', encode(exampleOne, schemaOne)?.buff);
-// console.log('Size:', encode(exampleOne, schemaOne)?.size);
+console.log(`
+ExampleOne
+`)
+console.log(decode(encode(data(exampleOne, schemaOne))));
+console.log('HEX:', encode(data(exampleOne, schemaOne))?.hex);
+console.log(encode(data(exampleOne, schemaOne))?.buff);
+console.log('Size:', encode(data(exampleOne, schemaOne))?.size);
 
-// console.log(`
-// ExampleTwo
-// `)
-// console.log(decode(encode(exampleTwo, schemaTwo), schemaTwo));
-// console.log('HEX:', encode(exampleTwo, schemaTwo)?.hex);
-// console.log('Buffer:', encode(exampleTwo, schemaTwo)?.buff);
-// console.log('Size:', encode(exampleTwo, schemaTwo)?.size);
+console.log(`
+ExampleTwo
+`)
+console.log(decode(encode(data(exampleTwo, schemaTwo))));
+console.log('HEX:', encode(data(exampleTwo, schemaTwo))?.hex);
+console.log(encode(data(exampleTwo, schemaTwo))?.buff);
+console.log('Size:', encode(data(exampleTwo, schemaTwo))?.size);
